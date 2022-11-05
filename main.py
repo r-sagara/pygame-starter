@@ -3,10 +3,14 @@ import os
 
 WIDTH, HEIGHT = 900, 500
 ASSETS_FOLDER_PATH = "Assets"
-WHITE = (255, 255, 255)
+WHITE = (255, 255, 254)
 BLACK = (0, 0, 0)
 SPACESHIP_WIDTH, SPACESHIP_HEIGHT = 55, 40
 FPS = 60
+
+BORDER_WIDTH = 10
+BORDER_HEIGHT = HEIGHT
+BORDER_RECT = pygame.Rect(WIDTH//2 - BORDER_WIDTH//2, 0, BORDER_WIDTH, BORDER_HEIGHT)
 
 class Display:
     def __init__(self, width, height):
@@ -18,16 +22,16 @@ class Display:
 
     def draw(self):
         self.surface.fill(WHITE)
+        pygame.draw.rect(self.surface, BLACK, BORDER_RECT)
         for game_obj in self.game_objects:
-            self.surface.blit(game_obj.image, (game_obj.x, game_obj.y))
+            if type(game_obj) == Spaceship:
+                self.surface.blit(game_obj.image, (game_obj.x, game_obj.y))
         pygame.display.update()
 
 
-class SpaceObject:
-    velocity = 5
-
-    def __init__(self, image, start_x=0, start_y=0):
-        self.image = pygame.image.load(os.path.join(ASSETS_FOLDER_PATH, image))
+class DisplayObject:
+    def __init__(self, method, start_x=0, start_y=0):
+        self.method = method
         self.x = start_x
         self.y = start_y
 
@@ -36,6 +40,16 @@ class SpaceObject:
 
     def rotate_image(self, angle):
         self.image = pygame.transform.rotate(self.image, angle)
+
+
+class Spaceship(DisplayObject):
+    velocity = 5
+
+    def __init__(self, image, start_x=0, start_y=0):
+        super().__init__(pygame.image.load)
+        self.image = self.method(os.path.join(ASSETS_FOLDER_PATH, image))
+        self.x = start_x
+        self.y = start_y
 
     def move_left(self):
         self.x -= self.velocity
@@ -59,7 +73,8 @@ class MoveHandler:
             key_right: "move_right"
             }
 
-    def move(self, spaceship, keys_pressed):  
+    def move(self, spaceship):
+        keys_pressed = pygame.key.get_pressed()  
         for key in self.moves_dict:
             if keys_pressed[key]:
                 getattr(spaceship, self.moves_dict[key])()
@@ -69,14 +84,17 @@ def main():
     clock = pygame.time.Clock()
     win = Display(WIDTH, HEIGHT)
 
-    yellow_spaceship = SpaceObject("spaceship_yellow.png", 100, 300)
+    yellow_spaceship = Spaceship("spaceship_yellow.png", 100, 300)
     yellow_spaceship.transform_image((SPACESHIP_WIDTH, SPACESHIP_HEIGHT))
     yellow_spaceship.rotate_image(90)
 
-    red_spaceship = SpaceObject("spaceship_red.png", 700, 300)
+    red_spaceship = Spaceship("spaceship_red.png", 700, 300)
     red_spaceship.transform_image((SPACESHIP_WIDTH, SPACESHIP_HEIGHT))
     red_spaceship.rotate_image(-90)
 
+    mid_border = DisplayObject(pygame.draw.rect)
+
+    win.add_object(mid_border)
     win.add_object(yellow_spaceship)
     win.add_object(red_spaceship)
 
@@ -89,11 +107,10 @@ def main():
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 run = False
-
-            keys_pressed = pygame.key.get_pressed()
-            controler_1.move(yellow_spaceship, keys_pressed)
-            controler_2.move(red_spaceship, keys_pressed)
-            win.draw()
+        
+        controler_1.move(yellow_spaceship)
+        controler_2.move(red_spaceship)
+        win.draw()
 
     pygame.quit()
 
