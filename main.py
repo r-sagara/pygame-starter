@@ -24,44 +24,47 @@ class Display:
         self.surface.fill(WHITE)
         pygame.draw.rect(self.surface, BLACK, BORDER_RECT)
         for game_obj in self.game_objects:
-            if type(game_obj) == Spaceship:
-                self.surface.blit(game_obj.image, (game_obj.x, game_obj.y))
+            self.surface.blit(game_obj.image, (game_obj.x, game_obj.y))
         pygame.display.update()
 
 
 class DisplayObject:
-    def __init__(self, method, start_x=0, start_y=0):
-        self.method = method
+    def __init__(self, start_x=0, start_y=0):
         self.x = start_x
         self.y = start_y
+        self.angle = 0
 
     def transform_image(self, scale):
         self.image = pygame.transform.scale(self.image, scale)
 
-    def rotate_image(self, angle):
-        self.image = pygame.transform.rotate(self.image, angle)
+    def rotate_image(self, target_angle):
+        if self.angle != target_angle:
+            self.image = pygame.transform.rotate(self.image, target_angle - self.angle)
+            self.angle = target_angle
 
 
 class Spaceship(DisplayObject):
     velocity = 5
 
     def __init__(self, image, start_x=0, start_y=0):
-        super().__init__(pygame.image.load)
-        self.image = self.method(os.path.join(ASSETS_FOLDER_PATH, image))
-        self.x = start_x
-        self.y = start_y
+        super().__init__(start_x=start_x, start_y=start_y)
+        self.image = pygame.image.load(os.path.join(ASSETS_FOLDER_PATH, image))
 
     def move_left(self):
         self.x -= self.velocity
+        self.rotate_image(-90)
 
     def move_right(self):
         self.x += self.velocity
+        self.rotate_image(90)
 
     def move_up(self):
         self.y -= self.velocity
+        self.rotate_image(180)
 
     def move_down(self):
         self.y += self.velocity
+        self.rotate_image(0)
 
 
 class MoveHandler:
@@ -92,9 +95,6 @@ def main():
     red_spaceship.transform_image((SPACESHIP_WIDTH, SPACESHIP_HEIGHT))
     red_spaceship.rotate_image(-90)
 
-    mid_border = DisplayObject(pygame.draw.rect)
-
-    win.add_object(mid_border)
     win.add_object(yellow_spaceship)
     win.add_object(red_spaceship)
 
