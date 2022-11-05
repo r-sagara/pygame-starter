@@ -37,6 +37,33 @@ class SpaceObject:
     def rotate_image(self, angle):
         self.image = pygame.transform.rotate(self.image, angle)
 
+    def move_left(self):
+        self.x -= self.velocity
+
+    def move_right(self):
+        self.x += self.velocity
+
+    def move_up(self):
+        self.y -= self.velocity
+
+    def move_down(self):
+        self.y += self.velocity
+
+
+class MoveHandler:
+    def __init__(self, key_up, key_down, key_left, key_right):
+        self.moves_dict = {
+            key_up: "move_up", 
+            key_down: "move_down", 
+            key_left: "move_left",
+            key_right: "move_right"
+            }
+
+    def move(self, spaceship, keys_pressed):  
+        for key in self.moves_dict:
+            if keys_pressed[key]:
+                getattr(spaceship, self.moves_dict[key])()
+
 
 def main():
     clock = pygame.time.Clock()
@@ -53,6 +80,9 @@ def main():
     win.add_object(yellow_spaceship)
     win.add_object(red_spaceship)
 
+    controler_1 = MoveHandler(pygame.K_w, pygame.K_s, pygame.K_a, pygame.K_d)
+    controler_2 = MoveHandler(pygame.K_UP, pygame.K_DOWN, pygame.K_LEFT, pygame.K_RIGHT)
+
     run = True
     while run:
         clock.tick(FPS)
@@ -61,6 +91,8 @@ def main():
                 run = False
 
             keys_pressed = pygame.key.get_pressed()
+            controler_1.move(yellow_spaceship, keys_pressed)
+            controler_2.move(red_spaceship, keys_pressed)
             win.draw()
 
     pygame.quit()
