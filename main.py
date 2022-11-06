@@ -29,9 +29,8 @@ class Display:
 
 
 class DisplayObject:
-    def __init__(self, start_x=0, start_y=0):
-        self.x = start_x
-        self.y = start_y
+    def __init__(self, init_x=0, init_y=0, width=1, height=1):
+        self.rect = pygame.Rect(init_x, init_y, width, height)
         self.angle = 0
 
     def transform_image(self, scale):
@@ -47,8 +46,24 @@ class Spaceship(DisplayObject):
     velocity = 5
 
     def __init__(self, image, start_x=0, start_y=0):
-        super().__init__(start_x=start_x, start_y=start_y)
+        super().__init__(init_x=start_x, init_y=start_y)
         self.image = pygame.image.load(os.path.join(ASSETS_FOLDER_PATH, image))
+
+    @property
+    def x(self):
+        return self.rect.x
+
+    @x.setter
+    def x(self, value):
+        self.rect.x = value
+
+    @property
+    def y(self):
+        return self.rect.y
+
+    @y.setter
+    def y(self, value):
+        self.rect.y = value
 
     def move_left(self):
         self.x -= self.velocity
@@ -94,6 +109,8 @@ def main():
     red_spaceship = Spaceship("spaceship_red.png", 700, 300)
     red_spaceship.transform_image((SPACESHIP_WIDTH, SPACESHIP_HEIGHT))
     red_spaceship.rotate_image(-90)
+
+    #mid_border = DisplayObject
 
     win.add_object(yellow_spaceship)
     win.add_object(red_spaceship)
