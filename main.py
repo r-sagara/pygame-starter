@@ -25,7 +25,8 @@ class Display:
         self.surface.fill(WHITE)
         pygame.draw.rect(self.surface, BLACK, BORDER_RECT)
         for game_obj in self.game_objects:
-            self.surface.blit(game_obj.image, (game_obj.x, game_obj.y))
+            pygame.draw.rect(self.surface, BLACK, game_obj)
+            self.surface.blit(game_obj.image, (game_obj.x, game_obj.y))       
         pygame.display.update()
 
 
@@ -50,7 +51,7 @@ class Spaceship(DisplayObject):
     SPACESHIP_WIDTH, SPACESHIP_HEIGHT = 55, 40
 
     def __init__(self, image, start_x=0, start_y=0):
-        super().__init__(init_x=start_x, init_y=start_y, width=self.SPACESHIP_WIDTH, height=self.SPACESHIP_HEIGHT)
+        super().__init__(init_x=start_x, init_y=start_y, width=self.SPACESHIP_WIDTH, height=self.SPACESHIP_WIDTH)
         self.image = pygame.image.load(os.path.join(ASSETS_FOLDER_PATH, image))
         self.transform_image((self.SPACESHIP_WIDTH, self.SPACESHIP_HEIGHT))
 
