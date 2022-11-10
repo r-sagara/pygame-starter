@@ -25,7 +25,6 @@ class Display:
         self.surface.fill(WHITE)
         pygame.draw.rect(self.surface, BLACK, BORDER_RECT)
         for game_obj in self.game_objects:
-            pygame.draw.rect(self.surface, BLACK, game_obj)
             self.surface.blit(game_obj.image, (game_obj.x, game_obj.y))       
         pygame.display.update()
 
@@ -42,8 +41,19 @@ class DisplayObject(Rect):
 
     def rotate_image(self, target_angle):
         if self.image and self.angle != target_angle:
-            self.image = pygame.transform.rotate(self.image, target_angle - self.angle)
+            rotated_image = pygame.transform.rotate(self.image, target_angle - self.angle)
+            rotated_image_rect = rotated_image.get_rect(center=self.image.get_rect(topleft=self.topleft).center)
+            self.image = rotated_image
+            self.x, self.y = rotated_image_rect.topleft
             self.angle = target_angle
+
+
+class Bullet(DisplayObject):
+    VELOCITY = 7
+    BULLET_WIDTH, BULLET_HEIGHT = 10, 5
+
+    def __init__(self, start_x=0, start_y=0):
+        super().__init__(init_x=start_x, init_y=start_y, width=self.BULLET_WIDTH, height=self.BULLET_HEIGHT)
 
 
 class Spaceship(DisplayObject):
@@ -51,52 +61,59 @@ class Spaceship(DisplayObject):
     SPACESHIP_WIDTH, SPACESHIP_HEIGHT = 55, 40
 
     def __init__(self, image, start_x=0, start_y=0):
-        super().__init__(init_x=start_x, init_y=start_y, width=self.SPACESHIP_WIDTH, height=self.SPACESHIP_WIDTH)
+        super().__init__(init_x=start_x, init_y=start_y, width=self.SPACESHIP_WIDTH, height=self.SPACESHIP_HEIGHT)
         self.image = pygame.image.load(os.path.join(ASSETS_FOLDER_PATH, image))
         self.transform_image((self.SPACESHIP_WIDTH, self.SPACESHIP_HEIGHT))
+        self.bullets = []
 
     def move_left(self):
         self.x -= self.VELOCITY
-        self.rotate_image(-90)
+        # self.rotate_image(-90)
 
     def move_right(self):
         self.x += self.VELOCITY
-        self.rotate_image(90)
+        # self.rotate_image(90)
 
     def move_up(self):
         self.y -= self.VELOCITY
-        self.rotate_image(180)
+        # self.rotate_image(180)
 
     def move_down(self):
         self.y += self.VELOCITY
-        self.rotate_image(0)
+        # self.rotate_image(0)
 
 
-class MoveHandler:
-    def __init__(self, key_up, key_down, key_left, key_right):
+class ControlHandler:
+    def __init__(self, key_up, key_down, key_left, key_right, move_limit_area, key_shot, spaceship):
         self.__moves_collection = [
             (key_up, "move_up", "top", operator.gt),
             (key_down, "move_down", "bottom", operator.lt), 
             (key_left, "move_left", "left", operator.gt),
             (key_right, "move_right", "right", operator.lt)
         ]
+        self.__key_shot = key_shot
+        self.__spaceship = spaceship
+        self.move_limit_area = move_limit_area
     
     @property
-    def limit_area(self):
+    def move_limit_area(self):
         try:
-            return self.__limit_area
+            return self.__move_limit_area
         except AttributeError:
             return None
 
-    @limit_area.setter
-    def limit_area(self, rect: Rect):
-        self.__limit_area = rect
+    @move_limit_area.setter
+    def move_limit_area(self, rect: Rect):
+        self.__move_limit_area = rect
 
-    def move(self, spaceship):
-        keys_pressed = pygame.key.get_pressed()
+    def handle_move(self, keys_pressed):
         for key, method, side, operator in self.__moves_collection:
-            if keys_pressed[key] and operator(getattr(spaceship, side), getattr(self.limit_area, side)):
-                getattr(spaceship, method)()
+            if keys_pressed[key] and operator(getattr(self.__spaceship, side), getattr(self.move_limit_area, side)):
+                getattr(self.__spaceship, method)()
+
+    def handle_shot(self, event_key):
+        if event_key == self.__key_shot:
+            self.__spaceship.bullets.append(Bullet(self.__spaceship.right))
 
 
 def main():
@@ -112,10 +129,23 @@ def main():
     win.add_object(yellow_spaceship)
     win.add_object(red_spaceship)
 
-    controler_1 = MoveHandler(pygame.K_w, pygame.K_s, pygame.K_a, pygame.K_d)
-    controler_2 = MoveHandler(pygame.K_UP, pygame.K_DOWN, pygame.K_LEFT, pygame.K_RIGHT)
-    controler_1.limit_area = Rect(0, 0, BORDER_RECT.left, HEIGHT)
-    controler_2.limit_area = Rect(BORDER_RECT.right, 0, BORDER_RECT.left, HEIGHT)
+    controler_1 = ControlHandler(
+        pygame.K_w, 
+        pygame.K_s, 
+        pygame.K_a, 
+        pygame.K_d,
+        Rect(0, 0, BORDER_RECT.left, HEIGHT),
+        pygame.K_LCTRL,
+        spaceship=yellow_spaceship)
+
+    controler_2 = ControlHandler(
+        pygame.K_UP, 
+        pygame.K_DOWN, 
+        pygame.K_LEFT, 
+        pygame.K_RIGHT,
+        Rect(BORDER_RECT.right, 0, BORDER_RECT.left, HEIGHT),
+        pygame.K_RCTRL,
+        spaceship=red_spaceship)
 
     run = True
     while run:
@@ -123,10 +153,15 @@ def main():
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 run = False
-        
-        controler_1.move(yellow_spaceship)
-        controler_2.move(red_spaceship)
-        
+
+            if event.type == pygame.KEYDOWN:
+                controler_1.handle_shot(event.key)
+                controler_2.handle_shot(event.key)
+
+        keys_pressed = pygame.key.get_pressed()
+        controler_1.handle_move(keys_pressed)
+        controler_2.handle_move(keys_pressed)
+              
         win.draw()
 
     pygame.quit()
