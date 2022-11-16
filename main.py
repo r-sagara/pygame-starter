@@ -5,8 +5,9 @@ from pygame import Rect
 
 WIDTH, HEIGHT = 900, 500
 ASSETS_FOLDER_PATH = "Assets"
-WHITE = (255, 255, 254)
+WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
+RED = (255, 0, 255)
 FPS = 60
 
 BORDER_WIDTH = 10
@@ -25,7 +26,9 @@ class Display:
         self.surface.fill(WHITE)
         pygame.draw.rect(self.surface, BLACK, BORDER_RECT)
         for game_obj in self.game_objects:
-            self.surface.blit(game_obj.image, (game_obj.x, game_obj.y))       
+            self.surface.blit(game_obj.image, game_obj.topleft)
+            #pygame.draw.rect(self.surface, BLACK, game_obj)
+            pygame.draw.line(self.surface, RED, game_obj.center, game_obj.vector)          
         pygame.display.update()
 
 
@@ -34,6 +37,7 @@ class DisplayObject(Rect):
         super().__init__(init_x, init_y, width, height)
         self.image = None
         self.angle = 0
+        self.vector = self.center + pygame.math.Vector2(0, 20)
 
     def transform_image(self, scale):
         if self.image:
@@ -43,10 +47,11 @@ class DisplayObject(Rect):
         if self.image and self.angle != target_angle:
             rotated_image = pygame.transform.rotate(self.image, target_angle - self.angle)
             rotated_image_rect = rotated_image.get_rect(center=self.image.get_rect(topleft=self.topleft).center)
+            self.vector = (self.vector - self.center).rotate(target_angle - self.angle) + self.center
             self.image = rotated_image
             self.x, self.y = rotated_image_rect.topleft
             self.angle = target_angle
-
+   
 
 class Bullet(DisplayObject):
     VELOCITY = 7
@@ -54,6 +59,9 @@ class Bullet(DisplayObject):
 
     def __init__(self, start_x=0, start_y=0):
         super().__init__(init_x=start_x, init_y=start_y, width=self.BULLET_WIDTH, height=self.BULLET_HEIGHT)
+
+    def move(self):
+        pass
 
 
 class Spaceship(DisplayObject):
@@ -68,19 +76,23 @@ class Spaceship(DisplayObject):
 
     def move_left(self):
         self.x -= self.VELOCITY
-        # self.rotate_image(-90)
+        self.vector.x -= self.VELOCITY 
+        #self.rotate_image(-90)
 
     def move_right(self):
         self.x += self.VELOCITY
-        # self.rotate_image(90)
+        self.vector.x += self.VELOCITY
+        #self.rotate_image(90)
 
     def move_up(self):
         self.y -= self.VELOCITY
-        # self.rotate_image(180)
+        self.vector.y -= self.VELOCITY
+        #self.rotate_image(180)
 
     def move_down(self):
         self.y += self.VELOCITY
-        # self.rotate_image(0)
+        self.vector.y += self.VELOCITY
+        #self.rotate_image(0)
 
 
 class ControlHandler:
@@ -113,7 +125,8 @@ class ControlHandler:
 
     def handle_shot(self, event_key):
         if event_key == self.__key_shot:
-            self.__spaceship.bullets.append(Bullet(self.__spaceship.right))
+            self.__spaceship.bullets.append(Bullet(*self.__spaceship.center))
+            print(self.__spaceship.bullets)
 
 
 def main():
@@ -121,10 +134,10 @@ def main():
     win = Display(WIDTH, HEIGHT)
 
     yellow_spaceship = Spaceship("spaceship_yellow.png", 100, 300)
-    yellow_spaceship.rotate_image(90)
+    #yellow_spaceship.rotate_image(90)
 
     red_spaceship = Spaceship("spaceship_red.png", 700, 300)
-    red_spaceship.rotate_image(-90)
+    #red_spaceship.rotate_image(-90)
 
     win.add_object(yellow_spaceship)
     win.add_object(red_spaceship)
