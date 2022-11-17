@@ -26,9 +26,8 @@ class Display:
         self.surface.fill(WHITE)
         pygame.draw.rect(self.surface, BLACK, BORDER_RECT)
         for game_obj in self.game_objects:
-            self.surface.blit(game_obj.image, game_obj.topleft)
             #pygame.draw.rect(self.surface, BLACK, game_obj)
-            pygame.draw.line(self.surface, RED, game_obj.center, game_obj.vector)          
+            self.surface.blit(game_obj.image, (game_obj.x, game_obj.y))          
         pygame.display.update()
 
 
@@ -37,7 +36,6 @@ class DisplayObject(Rect):
         super().__init__(init_x, init_y, width, height)
         self.image = None
         self.angle = 0
-        self.vector = self.center + pygame.math.Vector2(0, 20)
 
     def transform_image(self, scale):
         if self.image:
@@ -45,12 +43,13 @@ class DisplayObject(Rect):
 
     def rotate_image(self, target_angle):
         if self.image and self.angle != target_angle:
+            print(self.image.get_rect(topleft=self.topleft).center)
             rotated_image = pygame.transform.rotate(self.image, target_angle - self.angle)
-            rotated_image_rect = rotated_image.get_rect(center=self.image.get_rect(topleft=self.topleft).center)
-            self.vector = (self.vector - self.center).rotate(target_angle - self.angle) + self.center
+            #rotated_image_rect = rotated_image.get_rect(center=self.image.get_rect(topleft=self.topleft).center)
             self.image = rotated_image
-            self.x, self.y = rotated_image_rect.topleft
+            #self.topleft = rotated_image_rect.topleft
             self.angle = target_angle
+            print(self.image.get_rect(topleft=self.topleft).center)
    
 
 class Bullet(DisplayObject):
@@ -75,24 +74,20 @@ class Spaceship(DisplayObject):
         self.bullets = []
 
     def move_left(self):
-        self.x -= self.VELOCITY
-        self.vector.x -= self.VELOCITY 
-        #self.rotate_image(-90)
+        self.x -= self.VELOCITY 
+        self.rotate_image(-90)
 
     def move_right(self):
         self.x += self.VELOCITY
-        self.vector.x += self.VELOCITY
-        #self.rotate_image(90)
+        self.rotate_image(90)
 
     def move_up(self):
         self.y -= self.VELOCITY
-        self.vector.y -= self.VELOCITY
-        #self.rotate_image(180)
+        self.rotate_image(180)
 
     def move_down(self):
         self.y += self.VELOCITY
-        self.vector.y += self.VELOCITY
-        #self.rotate_image(0)
+        self.rotate_image(0)
 
 
 class ControlHandler:
