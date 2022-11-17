@@ -45,9 +45,9 @@ class DisplayObject(Rect):
         if self.image and self.angle != target_angle:
             print(self.image.get_rect(topleft=self.topleft).center)
             rotated_image = pygame.transform.rotate(self.image, target_angle - self.angle)
-            #rotated_image_rect = rotated_image.get_rect(center=self.image.get_rect(topleft=self.topleft).center)
+            rotated_image_rect = rotated_image.get_rect(center=self.image.get_rect(topleft=self.topleft).center)
             self.image = rotated_image
-            #self.topleft = rotated_image_rect.topleft
+            self.topleft = rotated_image_rect.topleft
             self.angle = target_angle
             print(self.image.get_rect(topleft=self.topleft).center)
    
