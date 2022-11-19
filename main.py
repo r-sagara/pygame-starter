@@ -13,6 +13,8 @@ FPS = 60
 WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
 RED = (255, 0, 0)
+YELLOW = (255, 255, 0)
+GRASS_GREEN = (0, 154, 23)
 
 BORDER_WIDTH = 10
 BORDER_HEIGHT = HEIGHT
@@ -71,10 +73,27 @@ class DisplayObject(Rect):
 
 
 class Health(DisplayObject):
-    WIDTH, HEIGHT = 100, 5
+    WIDTH, HEIGHT = WIDTH//2 - 50, 5
+    PART = WIDTH // 10
 
-    def __init__(self, start_x, start_y, color):
-        super().__init__(init_x=start_x, init_y=start_y, width=self.BULLET_WIDTH, height=self.BULLET_HEIGHT, color=color)
+    def __init__(self, start_x, start_y, color, float="left"):
+        super().__init__(init_x=start_x, init_y=start_y, width=self.WIDTH, height=self.HEIGHT, color=color)
+        self.float = float
+        if self.float == "right":
+            self.topright = WIDTH - start_x, start_y
+        self.health = 10        
+
+    @property
+    def health(self):
+        return self.__health
+
+    @health.setter
+    def health(self, value):
+        self.__health = value
+        topright = self.topright
+        self.width = self.PART * self.__health
+        if self.float == "right":
+            self.topright = topright
 
 
 class Bullet(DisplayObject):
@@ -154,7 +173,7 @@ class ControlHandler:
             bullet.move(self.direction)
             if bullet.colliderect(vs) or not self.window.surface.get_rect().contains(bullet):
                 if vs.colliderect(bullet):
-                    vs.health -= 1
+                    vs.health.health -= 1
                     if vs.health == 0:
                         winner_text = f"{self.player.upper()} WIN"
                 self.bullets_to_move.remove(bullet)
@@ -167,9 +186,13 @@ def main():
 
     yellow_spaceship = Spaceship(100, 300, image="spaceship_yellow.png")
     yellow_spaceship.rotate_image(90)
+    yellow_health_background = Health(10, 10, YELLOW)
+    yellow_spaceship.health = Health(10, 10, GRASS_GREEN)
 
     red_spaceship = Spaceship(700, 300, image="spaceship_red.png")
     red_spaceship.rotate_image(-90)
+    red_health_background = Health(10, 10, YELLOW, float="right")
+    red_spaceship.health = Health(10, 10, GRASS_GREEN, float="right")
 
     space = DisplayObject(width=WIDTH, height=HEIGHT, image_path="space.png")
     border = DisplayObject(WIDTH//2 - BORDER_WIDTH//2, 0, BORDER_WIDTH, BORDER_HEIGHT, color=BLACK)
@@ -178,9 +201,10 @@ def main():
     win.add_object(border)
     win.add_object(yellow_spaceship)
     win.add_object(red_spaceship)
+    win.add_object(yellow_health_background)
+    win.add_object(red_health_background)
     win.add_object(yellow_spaceship.health)
     win.add_object(red_spaceship.health)
-    # TODO try to draw rectangles instead fonts
 
     controller_1 = ControlHandler(
         pygame.K_w, 
