@@ -16,7 +16,6 @@ RED = (255, 0, 0)
 
 BORDER_WIDTH = 10
 BORDER_HEIGHT = HEIGHT
-BORDER_RECT = Rect(WIDTH//2 - BORDER_WIDTH//2, 0, BORDER_WIDTH, BORDER_HEIGHT)
 
 YELLOW_FIRE = pygame.USEREVENT + 1
 RED_FIRE = pygame.USEREVENT + 2
@@ -38,21 +37,23 @@ class Display:
             self.game_objects.remove(game_obj)
 
     def draw(self):
-        self.surface.fill(WHITE)
-        pygame.draw.rect(self.surface, BLACK, BORDER_RECT)
         for game_obj in self.game_objects:
-            #pygame.draw.rect(self.surface, BLACK, game_obj)
-            if game_obj.image:
-                self.surface.blit(game_obj.image, (game_obj.x, game_obj.y))
+            if hasattr(game_obj, "image"):
+                #pygame.draw.rect(self.surface, BLACK, game_obj)
+                self.surface.blit(game_obj.image, (game_obj.x, game_obj.y))             
             elif isinstance(game_obj, Rect):
-                pygame.draw.rect(self.surface, RED, game_obj)      
+                pygame.draw.rect(self.surface, game_obj.color, game_obj)      
         pygame.display.update()
 
 
 class DisplayObject(Rect):
-    def __init__(self, init_x=0, init_y=0, width=1, height=1):
+    def __init__(self, init_x=0, init_y=0, width=1, height=1, image_path=None, color=None):
         super().__init__(init_x, init_y, width, height)
-        self.image = None
+        if image_path:
+            self.image = pygame.image.load(os.path.join(ASSETS_FOLDER_PATH, image_path))
+            self.transform_image((width, height))
+        if color:
+            self.color = color
         self.angle = 0
 
     def transform_image(self, scale):
@@ -65,14 +66,22 @@ class DisplayObject(Rect):
             rotated_image_rect = rotated_image.get_rect(center=self.image.get_rect(topleft=self.topleft).center)
             self.image = rotated_image
             self.topleft = rotated_image_rect.topleft
+            self.width, self.height = rotated_image_rect.width, rotated_image_rect.height
             self.angle = target_angle
-   
+
+
+class Health(DisplayObject):
+    WIDTH, HEIGHT = 100, 5
+
+    def __init__(self, start_x, start_y, color):
+        super().__init__(init_x=start_x, init_y=start_y, width=self.BULLET_WIDTH, height=self.BULLET_HEIGHT, color=color)
+
 
 class Bullet(DisplayObject):
-    BULLET_WIDTH, BULLET_HEIGHT = 20, 6
+    WIDTH, HEIGHT = 20, 6
 
-    def __init__(self, start_x=0, start_y=0):
-        super().__init__(width=self.BULLET_WIDTH, height=self.BULLET_HEIGHT)
+    def __init__(self, start_x, start_y, color):
+        super().__init__(width=self.WIDTH, height=self.HEIGHT, color=color)
         self.center = start_x, start_y
 
     def move(self, direction):
@@ -81,12 +90,11 @@ class Bullet(DisplayObject):
 
 class Spaceship(DisplayObject):
     VELOCITY = 5
-    SPACESHIP_WIDTH, SPACESHIP_HEIGHT = 55, 40
+    WIDTH, HEIGHT = 55, 40
 
-    def __init__(self, image, start_x=0, start_y=0):
-        super().__init__(init_x=start_x, init_y=start_y, width=self.SPACESHIP_WIDTH, height=self.SPACESHIP_WIDTH)
-        self.image = pygame.image.load(os.path.join(ASSETS_FOLDER_PATH, image))
-        self.transform_image((self.SPACESHIP_WIDTH, self.SPACESHIP_HEIGHT))
+    def __init__(self, start_x=0, start_y=0, image=None):
+        super().__init__(init_x=start_x, init_y=start_y, width=self.WIDTH, height=self.HEIGHT, image_path=image)
+        self.health = 10
 
     def move_left(self):
         self.x -= self.VELOCITY 
@@ -137,7 +145,7 @@ class ControlHandler:
 
     def handle_shot(self, event_key):
         if event_key == self.__key_shot and len(self.bullets_to_move) < MAX_BULLETS:
-            bullet = Bullet(*self.__spaceship.image.get_rect(topleft=self.__spaceship.topleft).center)
+            bullet = Bullet(*self.__spaceship.image.get_rect(topleft=self.__spaceship.topleft).center, color=RED)
             self.bullets_to_move.append(bullet)
             self.window.add_object(bullet)
 
@@ -145,6 +153,10 @@ class ControlHandler:
         for bullet in self.bullets_to_move:
             bullet.move(self.direction)
             if bullet.colliderect(vs) or not self.window.surface.get_rect().contains(bullet):
+                if vs.colliderect(bullet):
+                    vs.health -= 1
+                    if vs.health == 0:
+                        winner_text = f"{self.player.upper()} WIN"
                 self.bullets_to_move.remove(bullet)
                 self.window.remove_object(bullet)
 
@@ -153,21 +165,29 @@ def main():
     clock = pygame.time.Clock()
     win = Display(WIDTH, HEIGHT)
 
-    yellow_spaceship = Spaceship("spaceship_yellow.png", 100, 300)
+    yellow_spaceship = Spaceship(100, 300, image="spaceship_yellow.png")
     yellow_spaceship.rotate_image(90)
 
-    red_spaceship = Spaceship("spaceship_red.png", 700, 300)
+    red_spaceship = Spaceship(700, 300, image="spaceship_red.png")
     red_spaceship.rotate_image(-90)
 
+    space = DisplayObject(width=WIDTH, height=HEIGHT, image_path="space.png")
+    border = DisplayObject(WIDTH//2 - BORDER_WIDTH//2, 0, BORDER_WIDTH, BORDER_HEIGHT, color=BLACK)
+
+    win.add_object(space)
+    win.add_object(border)
     win.add_object(yellow_spaceship)
     win.add_object(red_spaceship)
+    win.add_object(yellow_spaceship.health)
+    win.add_object(red_spaceship.health)
+    # TODO try to draw rectangles instead fonts
 
     controller_1 = ControlHandler(
         pygame.K_w, 
         pygame.K_s, 
         pygame.K_a, 
         pygame.K_d,
-        Rect(0, 0, BORDER_RECT.left, HEIGHT),
+        Rect(0, 0, border.left, HEIGHT),
         pygame.K_LCTRL,
         player="yellow",
         spaceship=yellow_spaceship,
@@ -178,7 +198,7 @@ def main():
         pygame.K_DOWN, 
         pygame.K_LEFT, 
         pygame.K_RIGHT,
-        Rect(BORDER_RECT.right, 0, BORDER_RECT.left, HEIGHT),
+        Rect(border.right, 0, border.left, HEIGHT),
         pygame.K_RCTRL,
         player="red",
         spaceship=red_spaceship,
@@ -201,7 +221,6 @@ def main():
 
         controller_1.handle_bullets(vs=red_spaceship)
         controller_2.handle_bullets(vs=yellow_spaceship)
-
         win.draw()
 
     pygame.quit()
