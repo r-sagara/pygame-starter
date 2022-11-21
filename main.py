@@ -5,8 +5,8 @@ from pygame import Rect
 
 WIDTH, HEIGHT = 900, 500
 ASSETS_FOLDER_PATH = "Assets"
-MAX_BULLETS = 3
-BULLET_VELOCITY = 7
+MAX_BULLETS = 5
+BULLET_VELOCITY = 10
 
 FPS = 60
 
@@ -19,14 +19,13 @@ GRASS_GREEN = (0, 154, 23)
 BORDER_WIDTH = 10
 BORDER_HEIGHT = HEIGHT
 
-YELLOW_FIRE = pygame.USEREVENT + 1
-RED_FIRE = pygame.USEREVENT + 2
-
-YELLOW_HIT = pygame.USEREVENT + 3
-RED_HIT = pygame.USEREVENT + 4
+GAME_OVER = pygame.USEREVENT + 1
 
 
 class Display:
+    pygame.font.init()
+    WINNER_FONT = pygame.font.SysFont('comicsans', 100)
+
     def __init__(self, width, height):
         self.surface = pygame.display.set_mode((width, height))
         self.game_objects = list()
@@ -46,6 +45,13 @@ class Display:
             elif isinstance(game_obj, Rect):
                 pygame.draw.rect(self.surface, game_obj.color, game_obj)      
         pygame.display.update()
+
+    def draw_winner(self, player):
+        draw_text = self.WINNER_FONT.render(f"{player.upper()} WIN!", 1, WHITE)
+        text_rect = draw_text.get_rect(center=self.surface.get_rect().center)
+        self.surface.blit(draw_text, text_rect.topleft)
+        pygame.display.update()
+        pygame.time.delay(5000)
 
 
 class DisplayObject(Rect):
@@ -81,7 +87,7 @@ class Health(DisplayObject):
         self.float = float
         if self.float == "right":
             self.topright = WIDTH - start_x, start_y
-        self.health = 10        
+        self.health = 10      
 
     @property
     def health(self):
@@ -148,12 +154,8 @@ class ControlHandler:
         self.window = window
         if self.player == "yellow":
             self.direction = BULLET_VELOCITY
-            self.event_fire = YELLOW_FIRE
-            self.event_hit_enemy = RED_HIT
         elif self.player == "red":
             self.direction = -BULLET_VELOCITY
-            self.event_fire = RED_FIRE
-            self.event_hit_enemy = YELLOW_HIT
         else:
             raise AttributeError(f"Wrong player is set: {self.player}, expected players: yellow, red")
 
@@ -167,6 +169,7 @@ class ControlHandler:
             bullet = Bullet(*self.__spaceship.image.get_rect(topleft=self.__spaceship.topleft).center, color=RED)
             self.bullets_to_move.append(bullet)
             self.window.add_object(bullet)
+            #BULLET_FIRE_SOUND.play()
 
     def handle_bullets(self, vs):      
         for bullet in self.bullets_to_move:
@@ -174,13 +177,15 @@ class ControlHandler:
             if bullet.colliderect(vs) or not self.window.surface.get_rect().contains(bullet):
                 if vs.colliderect(bullet):
                     vs.health.health -= 1
-                    if vs.health == 0:
-                        winner_text = f"{self.player.upper()} WIN"
+                    #BULLET_HIT_SOUND.play()
+                    if vs.health.health == 0:
+                        self.window.draw_winner(self.player)
+                        pygame.event.post(pygame.event.Event(GAME_OVER))
                 self.bullets_to_move.remove(bullet)
                 self.window.remove_object(bullet)
 
 
-def main():
+def main():    
     clock = pygame.time.Clock()
     win = Display(WIDTH, HEIGHT)
 
@@ -197,14 +202,15 @@ def main():
     space = DisplayObject(width=WIDTH, height=HEIGHT, image_path="space.png")
     border = DisplayObject(WIDTH//2 - BORDER_WIDTH//2, 0, BORDER_WIDTH, BORDER_HEIGHT, color=BLACK)
 
-    win.add_object(space)
-    win.add_object(border)
-    win.add_object(yellow_spaceship)
-    win.add_object(red_spaceship)
-    win.add_object(yellow_health_background)
-    win.add_object(red_health_background)
-    win.add_object(yellow_spaceship.health)
-    win.add_object(red_spaceship.health)
+    win.game_objects = [
+        space,
+        border,
+        yellow_spaceship,
+        red_spaceship,
+        yellow_health_background,
+        red_health_background,
+        yellow_spaceship.health,
+        red_spaceship.health]
 
     controller_1 = ControlHandler(
         pygame.K_w, 
@@ -234,10 +240,14 @@ def main():
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 run = False
+                pygame.quit()
 
             if event.type == pygame.KEYDOWN:
                 controller_1.handle_shot(event.key)
                 controller_2.handle_shot(event.key)
+
+            if event.type == GAME_OVER:
+                run = False
 
         keys_pressed = pygame.key.get_pressed()
         controller_1.handle_move(keys_pressed)
@@ -247,7 +257,7 @@ def main():
         controller_2.handle_bullets(vs=yellow_spaceship)
         win.draw()
 
-    pygame.quit()
+    main()
 
 
 if __name__ == "__main__":
