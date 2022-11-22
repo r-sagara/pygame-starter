@@ -47,7 +47,7 @@ class Display:
         pygame.display.update()
 
     def draw_winner(self, player):
-        draw_text = self.WINNER_FONT.render(f"{player.upper()} WIN!", 1, WHITE)
+        draw_text = self.WINNER_FONT.render(f"{player.upper()} WIN!", 1, YELLOW if player == "yellow" else RED)
         text_rect = draw_text.get_rect(center=self.surface.get_rect().center)
         self.surface.blit(draw_text, text_rect.topleft)
         pygame.display.update()
